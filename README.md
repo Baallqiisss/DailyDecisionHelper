@@ -1,5 +1,3 @@
-# DailyDecisionHelper
-
 # Daily Decision Helper
 
 ## 📌 Judul Proyek & Deskripsi Singkat
