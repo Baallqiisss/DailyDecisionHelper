@@ -11,16 +11,31 @@ export default function AddPreset() {
     time: "",
     budget: "",
   });
+  const [files, setFiles] = useState([]);
 
   const onChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const onFilesChange = (e) => {
+    setFiles(Array.from(e.target.files || []));
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     try {
-      await API.post("/presets", form);
-      // set a one-time toast for dashboard to read
+      // if files selected, use FormData
+      if (files && files.length) {
+        const fd = new FormData();
+        fd.append('title', form.title);
+        fd.append('mood', form.mood);
+        fd.append('time', form.time);
+        fd.append('budget', form.budget);
+        files.forEach(f => fd.append('files', f));
+        await API.post('/presets', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      } else {
+        await API.post('/presets', form);
+      }
       try { localStorage.setItem("toast", JSON.stringify({ message: "Preset berhasil dibuat", type: "success" })); } catch {}
       nav("/dashboard");
     } catch (err) {
@@ -69,6 +84,9 @@ export default function AddPreset() {
           onChange={onChange}
           required
         />
+
+        <label>Attachment (foto / dokumen) — optional</label>
+        <input type="file" multiple onChange={onFilesChange} />
 
         <button type="submit" className="btn-primary">
           Simpan Preset

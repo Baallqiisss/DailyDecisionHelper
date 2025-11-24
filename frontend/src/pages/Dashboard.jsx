@@ -16,6 +16,14 @@ export default function Dashboard() {
   const [recsLoading, setRecsLoading] = useState({});
   const [toast, setToast] = useState({ message: "", type: "info" });
   const nav = useNavigate();
+  const apiBase = API.defaults.baseURL ? API.defaults.baseURL.replace(/\/?api\/?$/, '') : '';
+  const getFileUrl = (u) => {
+    if (!u) return u;
+    if (/^https?:\/\//i.test(u)) return u;
+    // ensure leading slash
+    const path = u.startsWith('/') ? u : `/${u}`;
+    return apiBase + path;
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -150,9 +158,28 @@ export default function Dashboard() {
             <p>Mood: {p.mood}</p>
             <p>Waktu: {p.time}</p>
             <p>Budget: {p.budget}</p>
+            {p.attachments && p.attachments.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <strong>Attachments:</strong>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                  {p.attachments.map((a, idx) => (
+                    <div key={idx} style={{ maxWidth: 120, textAlign: 'center' }}>
+                      {a.mimetype && a.mimetype.startsWith('image') ? (
+                        <img src={getFileUrl(a.url)} alt={a.originalname} style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8 }} />
+                      ) : (
+                        <a href={getFileUrl(a.url)} target="_blank" rel="noreferrer">{a.originalname}</a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <button style={smallButton} onClick={() => fetchRecommendations(p._id)}>
                 Rekomendasi
+              </button>
+              <button style={smallButton} onClick={() => nav(`/edit/${p._id}`)}>
+                Edit
               </button>
               <button style={deleteButton} onClick={() => handleDelete(p._id)}>
                 Hapus

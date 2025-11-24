@@ -2,11 +2,29 @@ const Preset = require("../models/Preset");
 
 
 exports.createPreset = async (req, res) => {
-const preset = await Preset.create({
-...req.body,
-userId: req.user.id
-});
-res.json(preset);
+	// support multipart/form-data with files via multer
+	const data = typeof req.body === 'object' ? { ...req.body } : {};
+	// parse fields that may be sent as strings
+	const presetData = {
+		title: data.title,
+		mood: data.mood,
+		time: data.time,
+		budget: data.budget,
+		userId: req.user.id
+	};
+
+	// handle files attached by multer (array)
+	if (req.files && req.files.length) {
+		presetData.attachments = req.files.map(f => ({
+			filename: f.filename,
+			originalname: f.originalname,
+			mimetype: f.mimetype,
+			url: `/uploads/${f.filename}`
+		}));
+	}
+
+	const preset = await Preset.create(presetData);
+	res.json(preset);
 };
 
 
@@ -75,6 +93,69 @@ exports.getRecommendation = async (req, res) => {
 	};
 
 	res.json({ recommendations });
+};
+
+exports.getPreset = async (req, res) => {
+	const { id } = req.params;
+	const preset = await Preset.findById(id);
+	if (!preset) return res.status(404).json({ message: 'Preset not found' });
+	// ensure owner
+	if (preset.userId.toString() !== req.user.id) return res.status(403).json({ message: 'Not allowed' });
+	res.json(preset);
+};
+
+exports.updatePreset = async (req, res) => {
+	const { id } = req.params;
+	const preset = await Preset.findById(id);
+	if (!preset) return res.status(404).json({ message: 'Preset not found' });
+
+	if (preset.userId.toString() !== req.user.id) return res.status(403).json({ message: 'Not allowed' });
+
+	// update fields from body (support multipart/form-data or json)
+	const data = typeof req.body === 'object' ? { ...req.body } : {};
+	if (data.title !== undefined) preset.title = data.title;
+	if (data.mood !== undefined) preset.mood = data.mood;
+	if (data.time !== undefined) preset.time = data.time;
+	if (data.budget !== undefined) preset.budget = data.budget;
+
+	// handle new files
+	if (req.files && req.files.length) {
+		const newFiles = req.files.map(f => ({
+			filename: f.filename,
+			originalname: f.originalname,
+			mimetype: f.mimetype,
+			url: `/uploads/${f.filename}`
+		}));
+		preset.attachments = (preset.attachments || []).concat(newFiles);
+	}
+
+	await preset.save();
+	res.json(preset);
+};
+
+exports.attachFiles = async (req, res) => {
+	const { id } = req.params;
+	const preset = await Preset.findById(id);
+	if (!preset) return res.status(404).json({ message: "Preset not found" });
+
+	// verify owner
+	if (preset.userId.toString() !== req.user.id) {
+		return res.status(403).json({ message: "Not allowed" });
+	}
+
+	if (!req.files || !req.files.length) return res.status(400).json({ message: "No files uploaded" });
+
+	const newFiles = req.files.map(f => ({
+		filename: f.filename,
+		originalname: f.originalname,
+		mimetype: f.mimetype,
+		url: `/uploads/${f.filename}`
+	}));
+
+	preset.attachments = (preset.attachments || []).concat(newFiles);
+	await preset.save();
+
+	res.json({ attachments: newFiles });
 };
 
 exports.deletePreset = async (req, res) => {

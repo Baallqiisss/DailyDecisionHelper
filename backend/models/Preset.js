@@ -10,6 +10,15 @@ userId: {
 type: mongoose.Schema.Types.ObjectId,
 ref: "User"
 }
+,
+attachments: [
+	{
+		filename: String,
+		originalname: String,
+		mimetype: String,
+		url: String
+	}
+]
 });
 
 
